@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -13,9 +14,13 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.google.inject.Inject;
+import hudson.model.*;
+import hudson.plugins.analysis.util.model.*;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
+import org.jenkinsci.plugins.database.jpa.PersistenceService;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -27,23 +32,13 @@ import com.thoughtworks.xstream.XStream;
 import jenkins.model.Jenkins;
 
 import hudson.XmlFile;
-import hudson.model.AbstractBuild;
-import hudson.model.Api;
-import hudson.model.Hudson;
-import hudson.model.ModelObject;
-import hudson.model.Result;
 import hudson.plugins.analysis.Messages;
 import hudson.plugins.analysis.util.HtmlPrinter;
 import hudson.plugins.analysis.util.PluginLogger;
-import hudson.plugins.analysis.util.model.AnnotationContainer;
-import hudson.plugins.analysis.util.model.AnnotationProvider;
-import hudson.plugins.analysis.util.model.AnnotationStream;
-import hudson.plugins.analysis.util.model.AnnotationsLabelProvider;
-import hudson.plugins.analysis.util.model.FileAnnotation;
-import hudson.plugins.analysis.util.model.JavaProject;
-import hudson.plugins.analysis.util.model.MavenModule;
-import hudson.plugins.analysis.util.model.Priority;
 import hudson.plugins.analysis.views.DetailFactory;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 
 /**
  * A base class for build results that is capable of storing a reference to the
@@ -65,6 +60,9 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     private static final String SUCCESS = "blue.png";
 
     private transient Object projectLock = new Object();
+
+    @Inject
+    PersistenceService persistenceService;
 
     /**
      * Returns the number of days for the specified number of milliseconds.
@@ -655,6 +653,21 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         }
         catch (IOException exception) {
             LOGGER.log(Level.SEVERE, "Failed to serialize the annotations of the build.", exception);
+        }
+        Jenkins.getInstance().getInjector().injectMembers(this);
+        try {
+            EntityManager entityManager = persistenceService.getPerItemEntityManagerFactory((TopLevelItem) this.getOwner().getProject()).createEntityManager();
+            entityManager.getTransaction().begin();
+            for (FileAnnotation annotation : annotations){
+                LOGGER.log(Level.INFO, "Persisting Annotation-Key: " + annotation.getKey());
+                entityManager.persist(new PersistableFileAnnotation(annotation));
+            }
+            entityManager.getTransaction().commit();
+            entityManager.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
