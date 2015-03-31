@@ -39,6 +39,9 @@ import hudson.plugins.analysis.views.DetailFactory;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 
 /**
  * A base class for build results that is capable of storing a reference to the
@@ -62,13 +65,12 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     private transient Object projectLock = new Object();
 
     @Inject
-    PersistenceService persistenceService;
+    private transient PersistenceService persistenceService;
 
     /**
      * Returns the number of days for the specified number of milliseconds.
      *
-     * @param ms
-     *            milliseconds
+     * @param ms milliseconds
      * @return the number of days
      */
     public static long getDays(final long ms) {
@@ -211,7 +213,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * @since 1.39
      */
     protected BuildResult(final AbstractBuild<?, ?> build, final BuildHistory history,
-            final ParserResult result, final String defaultEncoding) {
+                          final ParserResult result, final String defaultEncoding) {
         initialize(history, build, defaultEncoding, result);
     }
 
@@ -263,6 +265,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         this.history = history;
         owner = build;
         this.defaultEncoding = defaultEncoding;
+        this.persistenceService = Jenkins.getInstance().getInjector().getInstance(PersistenceService.class);
 
         modules = new HashSet<String>(result.getModules());
         numberOfModules = modules.size();
@@ -933,19 +936,171 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      */
     private JavaProject loadResult() {
         JavaProject result;
+        JavaProject newProject = new JavaProject();
+        TopLevelItem topLevelItem = (TopLevelItem) this.getOwner().getProject();
+        Jenkins.getInstance().getInjector().injectMembers(this);
         try {
-            JavaProject newProject = new JavaProject();
-            FileAnnotation[] annotations = (FileAnnotation[])getDataFile().read();
-            newProject.addAnnotations(annotations);
-            attachLabelProvider(newProject);
+            LOGGER.log(Level.INFO, "Getting PerItemEntityManager for top-level-item: " + topLevelItem.getDescriptor().getDisplayName());
+            EntityManagerFactory perItemEntityManagerFactory = persistenceService.getPerItemEntityManagerFactory(topLevelItem);
+            // TODO fix classpath issues (antlr.jar needed?)
+            CriteriaBuilder criteriaBuilder = perItemEntityManagerFactory.getCriteriaBuilder();
+            CriteriaQuery<PersistableFileAnnotation> query = criteriaBuilder.createQuery(PersistableFileAnnotation.class);
+            Root<PersistableFileAnnotation> persistableFileAnnotationRoot = query.from(PersistableFileAnnotation.class);
+            query.select(persistableFileAnnotationRoot);
+            List<PersistableFileAnnotation> resultList = perItemEntityManagerFactory.createEntityManager().createQuery(query).getResultList();
+            LOGGER.log(Level.INFO, "Retrieved " + resultList.size() + " rows.");
+            newProject.addAnnotations(resultList);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        FileAnnotation annotation = new FileAnnotation() {
+//            @Override
+//            public int compareTo(FileAnnotation fileAnnotation) {
+//                return 0;
+//            }
+//
+//            @Override
+//            public String getMessage() {
+//                return "message";
+//            }
+//
+//            @Override
+//            public String getToolTip() {
+//                return "tt";
+//            }
+//
+//            @Override
+//            public int getPrimaryLineNumber() {
+//                return 23;
+//            }
+//
+//            @Override
+//            public Collection<LineRange> getLineRanges() {
+//                return null;
+//            }
+//
+//            @Override
+//            public long getKey() {
+//                return 0;
+//            }
+//
+//            @Override
+//            public Priority getPriority() {
+//                return Priority.NORMAL;
+//            }
+//
+//            @Override
+//            public String getFileName() {
+//                return "filename";
+//            }
+//
+//            @Override
+//            public String getLinkName() {
+//                return "linkname";
+//            }
+//
+//            @Override
+//            public String getTempName(AbstractBuild<?, ?> owner) {
+//                return "tmpname";
+//            }
+//
+//            @Override
+//            public void setFileName(String fileName) {
+//
+//            }
+//
+//            @Override
+//            public void setPathName(String workspacePath) {
+//
+//            }
+//
+//            @Override
+//            public boolean canDisplayFile(AbstractBuild<?, ?> owner) {
+//                return false;
+//            }
+//
+//            @Override
+//            public String getShortFileName() {
+//                return "shortFilename";
+//            }
+//
+//            @Override
+//            public String getModuleName() {
+//                return "modulename";
+//            }
+//
+//            @Override
+//            public void setModuleName(String moduleName) {
+//
+//            }
+//
+//            @Override
+//            public String getPackageName() {
+//                return "pacakgename";
+//            }
+//
+//            @Override
+//            public boolean hasPackageName() {
+//                return false;
+//            }
+//
+//            @Override
+//            public String getPathName() {
+//                return "pathname";
+//            }
+//
+//            @Override
+//            public String getOrigin() {
+//                return "checkstyle";
+//            }
+//
+//            @Override
+//            public String getCategory() {
+//                return "CATEGORY";
+//            }
+//
+//            @Override
+//            public String getType() {
+//                return "bug";
+//            }
+//
+//            @Override
+//            public long getContextHashCode() {
+//                return 0;
+//            }
+//
+//            @Override
+//            public void setContextHashCode(long contextHashCode) {
+//
+//            }
+//
+//            @Override
+//            public int getColumnStart() {
+//                return 0;
+//            }
+//
+//            @Override
+//            public int getColumnEnd() {
+//                return 0;
+//            }
+//
+//            @Override
+//            public boolean isInConsoleLog() {
+//                return false;
+//            }
+//        };
+//        newProject.addAnnotation(annotation);
+        attachLabelProvider(newProject);
 
-            LOGGER.log(Level.FINE, "Loaded data file " + getDataFile() + " for build " + getOwner().getNumber());
-            result = newProject;
-        }
-        catch (IOException exception) {
-            LOGGER.log(Level.WARNING, "Failed to load " + getDataFile(), exception);
-            result = new JavaProject();
-        }
+        LOGGER.log(Level.INFO, "Loaded data file " + getDataFile() + " for build " + getOwner().getNumber());
+        result = newProject;
+//        }
+//        catch (IOException exception) {
+//            LOGGER.log(Level.WARNING, "Failed to load " + getDataFile(), exception);
+//            result = new JavaProject();
+//        }
         project = new WeakReference<JavaProject>(result);
 
         return result;
