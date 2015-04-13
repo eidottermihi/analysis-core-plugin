@@ -39,9 +39,6 @@ import hudson.plugins.analysis.views.DetailFactory;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 
 /**
  * A base class for build results that is capable of storing a reference to the
@@ -77,61 +74,109 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         return Math.max(1, ms / DateUtils.MILLIS_PER_DAY);
     }
 
-    /** Current build as owner of this action. */
+    /**
+     * Current build as owner of this action.
+     */
     private AbstractBuild<?, ?> owner;
-    /** All parsed modules. */
+    /**
+     * All parsed modules.
+     */
     private Set<String> modules;
-    /** The total number of parsed modules (regardless if there are annotations). */
+    /**
+     * The total number of parsed modules (regardless if there are annotations).
+     */
     private int numberOfModules;
-    /** The default encoding to be used when reading and parsing files. */
+    /**
+     * The default encoding to be used when reading and parsing files.
+     */
     private String defaultEncoding;
 
-    /** The project containing the annotations. */
+    /**
+     * The project containing the annotations.
+     */
     @edu.umd.cs.findbugs.annotations.SuppressWarnings("Se")
     private transient WeakReference<JavaProject> project;
-    /** All new warnings in the current build. */
+    /**
+     * All new warnings in the current build.
+     */
     @edu.umd.cs.findbugs.annotations.SuppressWarnings("Se")
     private transient WeakReference<Collection<FileAnnotation>> newWarningsReference;
-    /** All fixed warnings in the current build. */
+    /**
+     * All fixed warnings in the current build.
+     */
     @edu.umd.cs.findbugs.annotations.SuppressWarnings("Se")
     private transient WeakReference<Collection<FileAnnotation>> fixedWarningsReference;
-    /** The build history for the results of this plug-in. */
+    /**
+     * The build history for the results of this plug-in.
+     */
     private transient BuildHistory history;
 
-    /** The number of warnings in this build. */
+    /**
+     * The number of warnings in this build.
+     */
     private int numberOfWarnings;
-    /** The number of new warnings in this build. */
+    /**
+     * The number of new warnings in this build.
+     */
     private int numberOfNewWarnings;
-    /** The number of fixed warnings in this build. */
+    /**
+     * The number of fixed warnings in this build.
+     */
     private int numberOfFixedWarnings;
 
-    /** Difference between this and the previous build. */
+    /**
+     * Difference between this and the previous build.
+     */
     private int delta;
-    /** Difference between this and the previous build (Priority low). */
+    /**
+     * Difference between this and the previous build (Priority low).
+     */
     private int lowDelta;
-    /** Difference between this and the previous build (Priority normal). */
+    /**
+     * Difference between this and the previous build (Priority normal).
+     */
     private int normalDelta;
-    /** Difference between this and the previous build (Priority high). */
+    /**
+     * Difference between this and the previous build (Priority high).
+     */
     private int highDelta;
 
-    /** The number of low priority warnings in this build. */
+    /**
+     * The number of low priority warnings in this build.
+     */
     private int lowWarnings;
-    /** The number of normal priority warnings in this build. */
+    /**
+     * The number of normal priority warnings in this build.
+     */
     private int normalWarnings;
-    /** The number of high priority warnings in this build. */
+    /**
+     * The number of high priority warnings in this build.
+     */
     private int highWarnings;
 
-    /** Determines since which build we have zero warnings. */
+    /**
+     * Determines since which build we have zero warnings.
+     */
     private int zeroWarningsSinceBuild;
-    /** Determines since which time we have zero warnings. */
+    /**
+     * Determines since which time we have zero warnings.
+     */
     private long zeroWarningsSinceDate;
-    /** Determines the zero warnings high score. */
+    /**
+     * Determines the zero warnings high score.
+     */
     private long zeroWarningsHighScore;
-    /** Determines if the old zero high score has been broken. */
+    /**
+     * Determines if the old zero high score has been broken.
+     */
     private boolean isZeroWarningsHighscore;
-    /** Determines the number of msec still to go before a new high score is reached. */
+    /**
+     * Determines the number of msec still to go before a new high score is reached.
+     */
     private long highScoreGap;
-    /** Error messages. */
+    /**
+     * Error messages.
+     */
     @edu.umd.cs.findbugs.annotations.SuppressWarnings("Se")
     private List<String> errors;
 
@@ -202,14 +247,10 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * {@link #serializeAnnotations(Collection)} manually in your constructor to
      * persist them.
      *
-     * @param build
-     *            the current build as owner of this action
-     * @param history
-     *            build history
-     * @param result
-     *            the parsed result with all annotations
-     * @param defaultEncoding
-     *            the default encoding to be used when reading and parsing files
+     * @param build           the current build as owner of this action
+     * @param history         build history
+     * @param result          the parsed result with all annotations
+     * @param defaultEncoding the default encoding to be used when reading and parsing files
      * @since 1.39
      */
     protected BuildResult(final AbstractBuild<?, ?> build, final BuildHistory history,
@@ -220,8 +261,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     /**
      * Creates a new history based on the specified build.
      *
-     * @param build
-     *            the build to start with
+     * @param build the build to start with
      * @return the history
      */
     protected BuildHistory createHistory(final AbstractBuild<?, ?> build) {
@@ -250,23 +290,18 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     /**
      * Initializes this new instance of {@link BuildResult}.
      *
-     * @param build
-     *            the current build as owner of this action
-     * @param defaultEncoding
-     *            the default encoding to be used when reading and parsing files
-     * @param result
-     *            the parsed result with all annotations
-     * @param history
-     *            the history of build results of the associated plug-in
+     * @param history         the history of build results of the associated plug-in
+     * @param build           the current build as owner of this action
+     * @param defaultEncoding the default encoding to be used when reading and parsing files
+     * @param result          the parsed result with all annotations
      */
     @SuppressWarnings("hiding")
     private void initialize(final BuildHistory history, final AbstractBuild<?, ?> build, final String defaultEncoding, // NOCHECKSTYLE
-            final ParserResult result) {
+                            final ParserResult result) {
         this.history = history;
         owner = build;
         this.defaultEncoding = defaultEncoding;
         this.persistenceService = Jenkins.getInstance().getInjector().getInstance(PersistenceService.class);
-
         modules = new HashSet<String>(result.getModules());
         numberOfModules = modules.size();
         errors = new ArrayList<String>(result.getErrorMessages());
@@ -315,8 +350,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     private void defineReferenceBuild(final BuildHistory buildHistory) {
         if (buildHistory.hasReferenceBuild()) {
             referenceBuild = buildHistory.getReferenceBuild().getNumber();
-        }
-        else {
+        } else {
             referenceBuild = -1;
         }
     }
@@ -325,7 +359,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * Returns whether there is a reference build available.
      *
      * @return <code>true</code> if there is such a build, <code>false</code>
-     *         otherwise
+     * otherwise
      */
     private boolean hasReferenceBuild() {
         return referenceBuild > 0 && getReferenceBuild() != null;
@@ -333,6 +367,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
 
     /**
      * Returns the reference build.
+     *
      * @return the reference build.
      */
     @Exported
@@ -348,10 +383,8 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * Computes the zero warnings high score based on the current build and the
      * previous build (with results of the associated plug-in).
      *
-     * @param build
-     *            the current build
-     * @param currentResult
-     *            the current result
+     * @param build         the current build
+     * @param currentResult the current result
      */
     private void computeZeroWarningsHighScore(final AbstractBuild<?, ?> build, final ParserResult currentResult) {
         if (history.hasPreviousResult()) {
@@ -360,28 +393,24 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
                 if (previous.hasNoAnnotations()) {
                     zeroWarningsSinceBuild = previous.getZeroWarningsSinceBuild();
                     zeroWarningsSinceDate = previous.getZeroWarningsSinceDate();
-                }
-                else {
+                } else {
                     zeroWarningsSinceBuild = build.getNumber();
                     zeroWarningsSinceDate = build.getTimestamp().getTimeInMillis();
                 }
                 zeroWarningsHighScore = Math.max(previous.getZeroWarningsHighScore(), build.getTimestamp().getTimeInMillis() - zeroWarningsSinceDate);
                 if (previous.getZeroWarningsHighScore() == 0) {
                     isZeroWarningsHighscore = true;
-                }
-                else {
+                } else {
                     isZeroWarningsHighscore = zeroWarningsHighScore != previous.getZeroWarningsHighScore();
 
                 }
                 if (!isZeroWarningsHighscore) {
                     highScoreGap = previous.getZeroWarningsHighScore() - (build.getTimestamp().getTimeInMillis() - zeroWarningsSinceDate);
                 }
-            }
-            else {
+            } else {
                 zeroWarningsHighScore = previous.getZeroWarningsHighScore();
             }
-        }
-        else {
+        } else {
             if (currentResult.hasNoAnnotations()) {
                 zeroWarningsSinceBuild = build.getNumber();
                 zeroWarningsSinceDate = build.getTimestamp().getTimeInMillis();
@@ -444,8 +473,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
             if (high != null) {
                 highWarnings = Integer.valueOf(high);
             }
-        }
-        catch (NumberFormatException exception) {
+        } catch (NumberFormatException exception) {
             // ignore, and start with zero
         }
         return this;
@@ -485,7 +513,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * @return the thresholds
      */
     public Thresholds getThresholds() {
-        return (Thresholds)ObjectUtils.defaultIfNull(thresholds, new Thresholds());
+        return (Thresholds) ObjectUtils.defaultIfNull(thresholds, new Thresholds());
     }
 
     /**
@@ -493,8 +521,8 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * warnings.
      *
      * @return <code>true</code> if the absolute annotations delta should be
-     *         used, <code>false</code> if the actual annotations set difference
-     *         should be used to evaluate the build stability.
+     * used, <code>false</code> if the actual annotations set difference
+     * should be used to evaluate the build stability.
      */
     public boolean canUseDeltaValues() {
         return useDeltaValues;
@@ -536,6 +564,12 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * @return the name of the file to store the serialized annotations
      */
     protected abstract String getSerializationFileName();
+
+    /**
+     * Returns the origin of the annotations.
+     * @return the origin of the annotations
+     */
+    protected abstract String getOrigin();
 
     /**
      * Returns whether this result belongs to the last build.
@@ -646,24 +680,22 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * Serializes the annotations of the specified project and writes them to
      * the file specified by method {@link #getDataFile()}.
      *
-     * @param annotations
-     *            the annotations to store
+     * @param annotations the annotations to store
      */
     protected void serializeAnnotations(final Collection<FileAnnotation> annotations) {
         try {
             Collection<FileAnnotation> files = annotations;
             getDataFile().write(files.toArray(new FileAnnotation[files.size()]));
-        }
-        catch (IOException exception) {
+        } catch (IOException exception) {
             LOGGER.log(Level.SEVERE, "Failed to serialize the annotations of the build.", exception);
         }
         Jenkins.getInstance().getInjector().injectMembers(this);
         try {
             EntityManager entityManager = persistenceService.getPerItemEntityManagerFactory((TopLevelItem) this.getOwner().getProject()).createEntityManager();
             entityManager.getTransaction().begin();
-            for (FileAnnotation annotation : annotations){
-                LOGGER.log(Level.INFO, "Persisting Annotation-Key: " + annotation.getKey());
-                entityManager.persist(new PersistableFileAnnotation(annotation));
+            for (FileAnnotation annotation : annotations) {
+                LOGGER.log(Level.INFO, "Persisting Annotation-Key: " + annotation.getKey() + " for Build #" + this.getOwner().getNumber());
+                entityManager.persist(new PersistableFileAnnotation(annotation, this.getOwner().getNumber()));
             }
             entityManager.getTransaction().commit();
             entityManager.close();
@@ -796,20 +828,17 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * Returns the total number of warnings of the specified priority for
      * this object.
      *
-     * @param priority
-     *            the priority
+     * @param priority the priority
      * @return total number of annotations of the specified priority for this
-     *         object
+     * object
      */
     @Override
     public int getNumberOfAnnotations(final Priority priority) {
         if (priority == Priority.HIGH) {
             return highWarnings;
-        }
-        else if (priority == Priority.NORMAL) {
+        } else if (priority == Priority.NORMAL) {
             return normalWarnings;
-        }
-        else {
+        } else {
             return lowWarnings;
         }
     }
@@ -942,167 +971,21 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         try {
             LOGGER.log(Level.INFO, "Getting PerItemEntityManager for top-level-item: " + topLevelItem.getDescriptor().getDisplayName());
             EntityManagerFactory perItemEntityManagerFactory = persistenceService.getPerItemEntityManagerFactory(topLevelItem);
-            // TODO fix classpath issues (antlr.jar needed?)
-            CriteriaBuilder criteriaBuilder = perItemEntityManagerFactory.getCriteriaBuilder();
-            CriteriaQuery<PersistableFileAnnotation> query = criteriaBuilder.createQuery(PersistableFileAnnotation.class);
-            Root<PersistableFileAnnotation> persistableFileAnnotationRoot = query.from(PersistableFileAnnotation.class);
-            query.select(persistableFileAnnotationRoot);
-            List<PersistableFileAnnotation> resultList = perItemEntityManagerFactory.createEntityManager().createQuery(query).getResultList();
-            LOGGER.log(Level.INFO, "Retrieved " + resultList.size() + " rows.");
+            List resultList = perItemEntityManagerFactory.createEntityManager().createNamedQuery(PersistableFileAnnotation.FIND_BY_BUILDNR_AND_ORIGIN)
+                    .setParameter("buildNr", this.getOwner().getNumber())
+                    .setParameter("origin", this.getOrigin())
+                    .getResultList();
+            LOGGER.log(Level.INFO, "Retrieved " + resultList.size() + " annotations for build #" + this.getOwner().getNumber() + " with origin '" + this.getOrigin() + "'");
             newProject.addAnnotations(resultList);
+        // TODO Exception-Handling
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        FileAnnotation annotation = new FileAnnotation() {
-//            @Override
-//            public int compareTo(FileAnnotation fileAnnotation) {
-//                return 0;
-//            }
-//
-//            @Override
-//            public String getMessage() {
-//                return "message";
-//            }
-//
-//            @Override
-//            public String getToolTip() {
-//                return "tt";
-//            }
-//
-//            @Override
-//            public int getPrimaryLineNumber() {
-//                return 23;
-//            }
-//
-//            @Override
-//            public Collection<LineRange> getLineRanges() {
-//                return null;
-//            }
-//
-//            @Override
-//            public long getKey() {
-//                return 0;
-//            }
-//
-//            @Override
-//            public Priority getPriority() {
-//                return Priority.NORMAL;
-//            }
-//
-//            @Override
-//            public String getFileName() {
-//                return "filename";
-//            }
-//
-//            @Override
-//            public String getLinkName() {
-//                return "linkname";
-//            }
-//
-//            @Override
-//            public String getTempName(AbstractBuild<?, ?> owner) {
-//                return "tmpname";
-//            }
-//
-//            @Override
-//            public void setFileName(String fileName) {
-//
-//            }
-//
-//            @Override
-//            public void setPathName(String workspacePath) {
-//
-//            }
-//
-//            @Override
-//            public boolean canDisplayFile(AbstractBuild<?, ?> owner) {
-//                return false;
-//            }
-//
-//            @Override
-//            public String getShortFileName() {
-//                return "shortFilename";
-//            }
-//
-//            @Override
-//            public String getModuleName() {
-//                return "modulename";
-//            }
-//
-//            @Override
-//            public void setModuleName(String moduleName) {
-//
-//            }
-//
-//            @Override
-//            public String getPackageName() {
-//                return "pacakgename";
-//            }
-//
-//            @Override
-//            public boolean hasPackageName() {
-//                return false;
-//            }
-//
-//            @Override
-//            public String getPathName() {
-//                return "pathname";
-//            }
-//
-//            @Override
-//            public String getOrigin() {
-//                return "checkstyle";
-//            }
-//
-//            @Override
-//            public String getCategory() {
-//                return "CATEGORY";
-//            }
-//
-//            @Override
-//            public String getType() {
-//                return "bug";
-//            }
-//
-//            @Override
-//            public long getContextHashCode() {
-//                return 0;
-//            }
-//
-//            @Override
-//            public void setContextHashCode(long contextHashCode) {
-//
-//            }
-//
-//            @Override
-//            public int getColumnStart() {
-//                return 0;
-//            }
-//
-//            @Override
-//            public int getColumnEnd() {
-//                return 0;
-//            }
-//
-//            @Override
-//            public boolean isInConsoleLog() {
-//                return false;
-//            }
-//        };
-//        newProject.addAnnotation(annotation);
         attachLabelProvider(newProject);
-
-        LOGGER.log(Level.INFO, "Loaded data file " + getDataFile() + " for build " + getOwner().getNumber());
         result = newProject;
-//        }
-//        catch (IOException exception) {
-//            LOGGER.log(Level.WARNING, "Failed to load " + getDataFile(), exception);
-//            result = new JavaProject();
-//        }
         project = new WeakReference<JavaProject>(result);
-
         return result;
     }
 
@@ -1187,12 +1070,9 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     /**
      * Returns the dynamic result of the selection element.
      *
-     * @param link
-     *            the link to identify the sub page to show
-     * @param request
-     *            Stapler request
-     * @param response
-     *            Stapler response
+     * @param link     the link to identify the sub page to show
+     * @param request  Stapler request
+     * @param response Stapler response
      * @return the dynamic result of the analysis (detail page).
      */
     public Object getDynamic(final String link, final StaplerRequest request, final StaplerResponse response) {
@@ -1242,8 +1122,8 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * {@link HealthDescriptor} of this result.
      *
      * @return <code>true</code> if the build is successful, <code>false</code>
-     *         if the build has been set to {@link Result#UNSTABLE} or
-     *         {@link Result#FAILURE} by this result.
+     * if the build has been set to {@link Result#UNSTABLE} or
+     * {@link Result#FAILURE} by this result.
      */
     public boolean isSuccessful() {
         return pluginResult == Result.SUCCESS;
@@ -1255,14 +1135,10 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * build that owns this instance of {@link BuildResult} will be also
      * changed.
      *
-     * @param thresholds
-     *            the failure thresholds
-     * @param useDeltaValues
-     *            the use delta values when computing the differences
-     * @param logger
-     *            the logger
-     * @param url
-     *            the URL of the results
+     * @param thresholds     the failure thresholds
+     * @param useDeltaValues the use delta values when computing the differences
+     * @param logger         the logger
+     * @param url            the URL of the results
      */
     // CHECKSTYLE:OFF
     @SuppressWarnings("hiding")
@@ -1277,23 +1153,18 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * build that owns this instance of {@link BuildResult} will be also
      * changed.
      *
-     * @param thresholds
-     *            the failure thresholds
-     * @param useDeltaValues
-     *            the use delta values when computing the differences
-     * @param canComputeNew
-     *            determines whether new warnings should be computed (with
-     *            respect to baseline)
-     * @param logger
-     *            the logger
-     * @param url
-     *            the URL of the results
+     * @param thresholds     the failure thresholds
+     * @param useDeltaValues the use delta values when computing the differences
+     * @param canComputeNew  determines whether new warnings should be computed (with
+     *                       respect to baseline)
+     * @param logger         the logger
+     * @param url            the URL of the results
      */
     // CHECKSTYLE:OFF
     @SuppressWarnings("hiding")
     public void evaluateStatus(final Thresholds thresholds, final boolean useDeltaValues, final boolean canComputeNew,
-            final PluginLogger logger, final String url) {
-    // CHECKSTYLE:ON
+                               final PluginLogger logger, final String url) {
+        // CHECKSTYLE:ON
         this.thresholds = thresholds;
         this.useDeltaValues = useDeltaValues;
 
@@ -1303,12 +1174,10 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         if (history.isEmpty() || !canComputeNew) {
             logger.log("Ignore new warnings since this is the first valid build");
             buildResult = resultEvaluator.evaluateBuildResult(messages, thresholds, getAnnotations());
-        }
-        else if (useDeltaValues) {
+        } else if (useDeltaValues) {
             buildResult = resultEvaluator.evaluateBuildResult(messages, thresholds, getAnnotations(),
                     getDelta(), getHighDelta(), getNormalDelta(), getLowDelta());
-        }
-        else {
+        } else {
             buildResult = resultEvaluator.evaluateBuildResult(messages, thresholds,
                     getAnnotations(), getNewWarnings());
         }
@@ -1320,6 +1189,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     }
 
     // CHECKSTYLE:OFF
+
     /**
      * @deprecated use {@link #evaluateStatus(Thresholds, boolean, boolean, PluginLogger, String)}
      */
@@ -1341,8 +1211,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
                 if (previous.isSuccessful() && previous.isSuccessfulTouched()) {
                     successfulSinceBuild = previous.getSuccessfulSinceBuild();
                     successfulSinceDate = previous.getSuccessfulSinceDate();
-                }
-                else {
+                } else {
                     successfulSinceBuild = owner.getNumber();
                     successfulSinceDate = owner.getTimestamp().getTimeInMillis();
                 }
@@ -1350,8 +1219,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
                         owner.getTimestamp().getTimeInMillis() - successfulSinceDate);
                 if (previous.getSuccessfulHighScore() == 0) {
                     isSuccessfulHighscore = true;
-                }
-                else {
+                } else {
                     isSuccessfulHighscore = successfulHighscore != previous.getSuccessfulHighScore();
 
                 }
@@ -1359,12 +1227,10 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
                     successfulHighScoreGap = previous.getSuccessfulHighScore()
                             - (owner.getTimestamp().getTimeInMillis() - successfulSinceDate);
                 }
-            }
-            else {
+            } else {
                 successfulHighscore = previous.getSuccessfulHighScore();
             }
-        }
-        else {
+        } else {
             if (isSuccessful()) {
                 resetSuccessfulState();
             }
@@ -1385,7 +1251,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * Returns whether the successful state has been touched.
      *
      * @return <code>true</code> if the successful state has been touched,
-     *         <code>false</code> otherwise
+     * <code>false</code> otherwise
      */
     public boolean isSuccessfulTouched() {
         return isSuccessfulStateTouched;
@@ -1433,12 +1299,9 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * can call this method in {@link #getSummary()} to create the actual
      * visible user message.
      *
-     * @param url
-     *            the URL to the build results
-     * @param warnings
-     *            number of warnings
-     * @param modules
-     *            number of modules
+     * @param url      the URL to the build results
+     * @param warnings number of warnings
+     * @param modules  number of modules
      * @return the summary message
      */
     protected static String createDefaultSummary(final String url, final int warnings, final int modules) {
@@ -1447,15 +1310,13 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         String message = createWarningsMessage(warnings);
         if (warnings > 0) {
             summary.append(summary.link(url, message));
-        }
-        else {
+        } else {
             summary.append(message);
         }
         if (modules > 0) {
             summary.append(" ");
             summary.append(createAnalysesMessage(modules));
-        }
-        else {
+        } else {
             summary.append(".");
         }
         return summary.toString();
@@ -1464,8 +1325,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     private static String createAnalysesMessage(final int modules) {
         if (modules == 1) {
             return Messages.ResultAction_OneFile();
-        }
-        else {
+        } else {
             return Messages.ResultAction_MultipleFiles(modules);
         }
     }
@@ -1473,8 +1333,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     private static String createWarningsMessage(final int warnings) {
         if (warnings == 1) {
             return Messages.ResultAction_OneWarning();
-        }
-        else {
+        } else {
             return Messages.ResultAction_MultipleWarnings(warnings);
         }
     }
@@ -1494,12 +1353,9 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * call this method in {@link #createDeltaMessage()} to create the actual
      * visible user message.
      *
-     * @param url
-     *            the URL to the build results
-     * @param newWarnings
-     *            number of new warnings
-     * @param fixedWarnings
-     *            number of fixed warnings
+     * @param url           the URL to the build results
+     * @param newWarnings   number of new warnings
+     * @param fixedWarnings number of fixed warnings
      * @return the summary message
      */
     protected static String createDefaultDeltaMessage(final String url, final int newWarnings, final int fixedWarnings) {
@@ -1519,8 +1375,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     private static String createNewWarningsLinkName(final int newWarnings) {
         if (newWarnings == 1) {
             return Messages.ResultAction_OneNewWarning();
-        }
-        else {
+        } else {
             return Messages.ResultAction_MultipleNewWarnings(newWarnings);
         }
     }
@@ -1528,8 +1383,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     private static String createFixedWarningsLinkName(final int fixedWarnings) {
         if (fixedWarnings == 1) {
             return Messages.ResultAction_OneFixedWarning();
-        }
-        else {
+        } else {
             return Messages.ResultAction_MultipleFixedWarnings(fixedWarnings);
         }
     }
@@ -1553,8 +1407,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         if (getNumberOfAnnotations() == 0 && getDelta() == 0) {
             printer.append(printer.item(Messages.ResultAction_NoWarningsSince(getZeroWarningsSinceBuild())));
             printer.append(printer.item(createHighScoreMessage()));
-        }
-        else if (isSuccessfulTouched()) {
+        } else if (isSuccessfulTouched()) {
             printer.append(printer.item(createPluginResultMessage()));
             if (isSuccessful()) {
                 printer.append(printer.item(createSuccessfulHighScoreMessage()));
@@ -1594,12 +1447,10 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         if (pluginResult == Result.FAILURE) {
             return String.format(message, FAILED,
                     hudson.model.Messages.BallColor_Failed(), hudson.model.Messages.BallColor_Failed());
-        }
-        else if (pluginResult == Result.UNSTABLE) {
+        } else if (pluginResult == Result.UNSTABLE) {
             return String.format(message, UNSTABLE,
                     hudson.model.Messages.BallColor_Unstable(), hudson.model.Messages.BallColor_Unstable());
-        }
-        else {
+        } else {
             return String.format(message, SUCCESS,
                     hudson.model.Messages.BallColor_Success(), hudson.model.Messages.BallColor_Success());
         }
@@ -1628,17 +1479,14 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
             long days = getDays(getZeroWarningsHighScore());
             if (days == 1) {
                 return Messages.ResultAction_OneHighScore();
-            }
-            else {
+            } else {
                 return Messages.ResultAction_MultipleHighScore(days);
             }
-        }
-        else {
+        } else {
             long days = getDays(getHighScoreGap());
             if (days == 1) {
                 return Messages.ResultAction_OneNoHighScore();
-            }
-            else {
+            } else {
                 return Messages.ResultAction_MultipleNoHighScore(days);
             }
         }
@@ -1649,17 +1497,14 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
             long days = getDays(getSuccessfulHighScore());
             if (days == 1) {
                 return Messages.ResultAction_SuccessfulOneHighScore();
-            }
-            else {
+            } else {
                 return Messages.ResultAction_SuccessfulMultipleHighScore(days);
             }
-        }
-        else {
+        } else {
             long days = getDays(getSuccessfulHighScoreGap());
             if (days == 1) {
                 return Messages.ResultAction_SuccessfulOneNoHighScore();
-            }
-            else {
+            } else {
                 return Messages.ResultAction_SuccessfulMultipleNoHighScore(days);
             }
         }
@@ -1673,17 +1518,13 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     /**
      * Creates a new instance of {@link BuildResult}.
      *
-     * @param build
-     *            the current build as owner of this action
-     * @param defaultEncoding
-     *            the default encoding to be used when reading and parsing files
-     * @param result
-     *            the parsed result with all annotations
-     * @param history
-     *            the history of build results of the associated plug-in
+     * @param build           the current build as owner of this action
+     * @param defaultEncoding the default encoding to be used when reading and parsing files
+     * @param result          the parsed result with all annotations
+     * @param history         the history of build results of the associated plug-in
      * @deprecated use {@link #BuildResult(AbstractBuild, BuildHistory, ParserResult, String)}
-     *             The new constructor will not save the annotations anymore.
-     *             you need to save them manually
+     * The new constructor will not save the annotations anymore.
+     * you need to save them manually
      */
     @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
     @Deprecated
@@ -1695,15 +1536,12 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
     /**
      * Creates a new instance of {@link BuildResult}.
      *
-     * @param build
-     *            the current build as owner of this action
-     * @param defaultEncoding
-     *            the default encoding to be used when reading and parsing files
-     * @param result
-     *            the parsed result with all annotations
+     * @param build           the current build as owner of this action
+     * @param defaultEncoding the default encoding to be used when reading and parsing files
+     * @param result          the parsed result with all annotations
      * @deprecated use {@link #BuildResult(AbstractBuild, BuildHistory, ParserResult, String)}
-     *             The new constructor will not save the annotations anymore.
-     *             you need to save them manually
+     * The new constructor will not save the annotations anymore.
+     * you need to save them manually
      */
     @Deprecated
     @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")

@@ -16,11 +16,19 @@ import java.util.List;
  */
 @PerItemTable
 @Entity
+@NamedQueries({
+        @NamedQuery(name = PersistableFileAnnotation.FIND_BY_BUILDNR_AND_ORIGIN,
+                query = "SELECT p from PersistableFileAnnotation p where p.buildNr = :buildNr and p.origin = :origin")
+})
 public class PersistableFileAnnotation implements FileAnnotation, Serializable {
+
+    public static final String FIND_BY_BUILDNR_AND_ORIGIN = "PersistableFileAnnotation.findByBuildNrAndOrigin";
 
     @Id
     @GeneratedValue
     private long id;
+    @Column
+    private int buildNr;
     @Column
     private long key;
     @Column(length = 4096)
@@ -60,10 +68,11 @@ public class PersistableFileAnnotation implements FileAnnotation, Serializable {
     @Column
     private boolean isInConsoleLog;
 
-    public PersistableFileAnnotation(){
+    public PersistableFileAnnotation() {
     }
 
-    public PersistableFileAnnotation(FileAnnotation fileAnnotation){
+    public PersistableFileAnnotation(FileAnnotation fileAnnotation, int buildNr) {
+        setBuildNr(buildNr);
         setKey(fileAnnotation.getKey());
         setMessage(fileAnnotation.getMessage());
         setToolTip(fileAnnotation.getToolTip());
@@ -106,7 +115,7 @@ public class PersistableFileAnnotation implements FileAnnotation, Serializable {
     @Override
     public Collection<LineRange> getLineRanges() {
         final List<LineRange> ranges = new ArrayList<LineRange>();
-        for (PersistableLineRange range : this.lineRanges){
+        for (PersistableLineRange range : this.lineRanges) {
             ranges.add(new LineRange(range.getStart(), range.getEnd()));
         }
         return ranges;
@@ -293,5 +302,13 @@ public class PersistableFileAnnotation implements FileAnnotation, Serializable {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public int getBuildNr() {
+        return buildNr;
+    }
+
+    public void setBuildNr(int buildNr) {
+        this.buildNr = buildNr;
     }
 }
