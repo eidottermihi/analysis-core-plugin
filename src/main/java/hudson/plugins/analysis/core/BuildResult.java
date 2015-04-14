@@ -567,6 +567,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
 
     /**
      * Returns the origin of the annotations.
+     *
      * @return the origin of the annotations
      */
     protected abstract String getOrigin();
@@ -681,6 +682,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
      * the file specified by method {@link #getDataFile()}.
      *
      * @param annotations the annotations to store
+     * @deprecated use {@link BuildResult#persistAnnotations(Collection)} to store annotations in database
      */
     protected void serializeAnnotations(final Collection<FileAnnotation> annotations) {
         try {
@@ -689,20 +691,31 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
         } catch (IOException exception) {
             LOGGER.log(Level.SEVERE, "Failed to serialize the annotations of the build.", exception);
         }
+        persistAnnotations(annotations);
+    }
+
+    /**
+     * Persists the annotations of the specified project to the per-item database of this job.
+     *
+     * @param annotations the annotations to persist
+     */
+    protected void persistAnnotations(final Collection<FileAnnotation> annotations) {
+        LOGGER.log(Level.INFO, "Persisting " + annotations.size() + " annotations for Build #" + this.getOwner().getNumber());
         Jenkins.getInstance().getInjector().injectMembers(this);
+        EntityManager em = null;
         try {
-            EntityManager entityManager = persistenceService.getPerItemEntityManagerFactory((TopLevelItem) this.getOwner().getProject()).createEntityManager();
-            entityManager.getTransaction().begin();
+            em = persistenceService.getPerItemEntityManagerFactory((TopLevelItem) this.getOwner().getProject()).createEntityManager();
+            em.getTransaction().begin();
             for (FileAnnotation annotation : annotations) {
-                LOGGER.log(Level.INFO, "Persisting Annotation-Key: " + annotation.getKey() + " for Build #" + this.getOwner().getNumber());
-                entityManager.persist(new PersistableFileAnnotation(annotation, this.getOwner().getNumber()));
+                em.persist(new PersistableFileAnnotation(annotation, this.getOwner().getNumber()));
             }
-            entityManager.getTransaction().commit();
-            entityManager.close();
+            em.getTransaction().commit();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Failed to persist the annotations of the build.", e);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Failed to persist the annotations of the build.", e);
+        } finally {
+            if (em != null) em.close();
         }
     }
 
@@ -977,7 +990,7 @@ public abstract class BuildResult implements ModelObject, Serializable, Annotati
                     .getResultList();
             LOGGER.log(Level.INFO, "Retrieved " + resultList.size() + " annotations for build #" + this.getOwner().getNumber() + " with origin '" + this.getOrigin() + "'");
             newProject.addAnnotations(resultList);
-        // TODO Exception-Handling
+            // TODO Exception-Handling
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (IOException e) {
